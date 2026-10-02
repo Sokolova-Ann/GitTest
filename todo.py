@@ -2,9 +2,7 @@ from fastapi import APIRouter, Path, HTTPException
 from model import Todo, TodoItem
 
 todo_router = APIRouter()
-
 todo_list = []
-
 
 @todo_router.post("/todo", summary="Добавить новую задачу")
 async def add_todo(todo: Todo) -> dict:
@@ -17,7 +15,6 @@ async def add_todo(todo: Todo) -> dict:
     todo_list.append(todo)
     return {"message": f"Задача '{todo.item}' успешно добавлена с id={todo.id}."}
 
-
 @todo_router.get("/todo", summary="Получить все задачи")
 async def retrieve_todos() -> dict:
     return {
@@ -25,11 +22,8 @@ async def retrieve_todos() -> dict:
         "todos": todo_list
     }
 
-
 @todo_router.get("/todo/{todo_id}", summary="Получить задачу по id")
-async def get_single_todo(
-    todo_id: int = Path(..., title="ID задачи для поиска", ge=1)
-) -> dict:
+async def get_single_todo(todo_id: int = Path(..., title="ID задачи для поиска", ge=1)) -> dict:
     for todo in todo_list:
         if todo.id == todo_id:
             return {"todo": todo}
@@ -38,12 +32,8 @@ async def get_single_todo(
         detail=f"Задача с id={todo_id} не найдена."
     )
 
-
 @todo_router.put("/todo/{todo_id}", summary="Обновить задачу по id")
-async def update_todo(
-    todo_data: TodoItem,
-    todo_id: int = Path(..., title="ID задачи для обновления", ge=1)
-) -> dict:
+async def update_todo(todo_data: TodoItem, todo_id: int = Path(..., title="ID задачи для обновления", ge=1)) -> dict:
     for todo in todo_list:
         if todo.id == todo_id:
             todo.item = todo_data.item
@@ -53,11 +43,8 @@ async def update_todo(
         detail=f"Задача с id={todo_id} не найдена."
     )
 
-
 @todo_router.delete("/todo/{todo_id}", summary="Удалить задачу по id")
-async def delete_todo(
-    todo_id: int = Path(..., title="ID задачи для удаления", ge=1)
-) -> dict:
+async def delete_todo(todo_id: int = Path(..., title="ID задачи для удаления", ge=1)) -> dict:
     for index, todo in enumerate(todo_list):
         if todo.id == todo_id:
             todo_list.pop(index)

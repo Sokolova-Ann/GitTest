@@ -2,7 +2,6 @@ from pydantic import BaseModel
 
 
 class TodoItem(BaseModel):
-    """Модель для обновления задачи (без id)."""
     item: str
 
     class Config:
@@ -14,7 +13,6 @@ class TodoItem(BaseModel):
 
 
 class Todo(BaseModel):
-    """Модель задачи: id + текст."""
     id: int
     item: str
 
@@ -22,7 +20,7 @@ class Todo(BaseModel):
         schema_extra = {
             "example": {
                 "id": 1,
-                "item": "Пример задачи для Swagger"
+                "item": "Пример задачи"
             }
         }
 
