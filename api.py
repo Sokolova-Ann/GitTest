@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from todo import todo_router
 
 app = FastAPI(
-    title="Todo API — Практическое занятие №4",
+    title="Todo API Практическое занятие №3",
     description="Приложение для управления списком задач на FastAPI.",
     version="1.0.0"
 )
