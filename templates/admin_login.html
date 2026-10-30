@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель — вход</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #fff; padding: 30px 40px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); width: 340px; }
+        h1 { font-size: 20px; margin-top: 0; text-align: center; }
+        label { display: block; margin-top: 14px; font-size: 14px; color: #333; }
+        input { width: 100%; padding: 8px 10px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { margin-top: 20px; width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        .error { color: #c0392b; background: #fdecea; padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-size: 14px; }
+        .hint { font-size: 12px; color: #888; margin-top: 12px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Панель администратора</h1>
+        <form method="post" action="/admin/login">
+            <label>Email
+                <input type="email" name="email" required>
+            </label>
+            <label>Пароль
+                <input type="password" name="password" required>
+            </label>
+            <button type="submit">Войти</button>
+        </form>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        <div class="hint">По умолчанию: admin@planner.local / admin123</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
+        header { background: #2c3e50; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 18px; }
+        header a { color: #fff; text-decoration: none; font-size: 14px; }
+        .container { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+        .card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        h2 { font-size: 16px; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; }
+        th { background: #f8f9fb; color: #555; }
+        .btn-danger { background: #e74c3c; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+        .btn-danger:hover { background: #c0392b; }
+        .tag { display: inline-block; padding: 2px 8px; background: #eef2f7; color: #34495e; border-radius: 10px; font-size: 12px; margin-right: 4px; }
+        .empty { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Админ-панель — {{ admin.email }}</h1>
+        <a href="/admin/logout">Выйти</a>
+    </header>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>События ({{ events | length }})</h2>
+            {% if events %}
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Название</th><th>Локация</th><th>Теги</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td>{{ event.id }}</td>
+                            <td>{{ event.title }}</td>
+                            <td>{{ event.location }}</td>
+                            <td>
+                                {% for tag in event.tags %}
+                                    <span class="tag">{{ tag }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <form method="post" action="/admin/event/{{ event.id }}/delete" style="display:inline;">
+                                    <button class="btn-danger" type="submit"
+                                            onclick="return confirm('Удалить событие «{{ event.title }}»?');">
+                                        Удалить
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty">Пока нет событий. Создайте через <code>POST /event/new</code> или Swagger.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Пользователи ({{ users | length }})</h2>
+            {% if users %}
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Email</th><th>Админ</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>{{ u.email }}</td>
+                            <td>{% if u.is_admin %}да{% else %}—{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty">Нет пользователей.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</body>
+</html>
