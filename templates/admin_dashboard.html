@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark px-3">
+        <span class="navbar-brand">Админ: {{ admin }}</span>
+        <a href="/admin/logout" class="btn btn-outline-light btn-sm">Выйти</a>
+    </nav>
+    <div class="container mt-4">
+        <h3>Задачи ({{ todos|length }})</h3>
+        <ul class="list-group mb-4">
+            {% for t in todos %}
+                <li class="list-group-item">{{ t.item }} <small class="text-muted">(ID: {{ t.id }})</small></li>
+            {% else %}
+                <li class="list-group-item text-muted">Пусто</li>
+            {% endfor %}
+        </ul>
+
+        <h3>Пользователи ({{ users|length }})</h3>
+        <table class="table bg-white">
+            <tr><th>Email</th><th>Админ?</th></tr>
+            {% for u in users %}
+                <tr><td>{{ u.email }}</td><td>{% if u.is_admin %}Да{% else %}Нет{% endif %}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
