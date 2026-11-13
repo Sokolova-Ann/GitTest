@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель | СмотримВместе</title>
+    <style>
+        :root { --primary: #C8A2C8; --bg: #f4f4f9; --text: #333; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); padding: 30px; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: var(--primary); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .panel { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
+        .panel h2 { font-size: 1.2rem; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--primary); color: #fff; width: 100%; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; margin-bottom: 10px; }
+        .list-item { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; }
+        .list-item button { color: #C8A2C8; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Админ-панель</h1>
+        <p>Панель управления контентом и пользователями.</p>
+
+        <div id="auth-block">
+            <div class="form-group" style="max-width: 400px; margin-top: 20px;">
+                <label>Введите секретный код администратора:</label>
+                <input type="password" id="admin-token" class="form-control" placeholder="admin" style="margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn btn-primary" onclick="loginAdmin()">Войти</button>
+            </div>
+        </div>
+
+        <div id="admin-content" class="hidden">
+            <div class="grid">
+                <!-- Левая колонка: Управление фильмами -->
+                <div class="panel">
+                    <h2>🎬 Управление каталогом</h2>
+                    <div id="films-list"></div>
+                </div>
+
+                <!-- Правая колонка: Пользователи -->
+                <div class="panel">
+                    <h2>👥 Пользователи</h2>
+                    <div id="users-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000";
+        let adminToken = localStorage.getItem('admin_token');
+
+        function loginAdmin() {
+            const token = document.getElementById('admin-token').value;
+            if (!token) return;
+            // Просто сохраняем, проверим при запросе
+            adminToken = token;
+            localStorage.setItem('admin_token', token);
+            checkAuthAndLoad();
+        }
+
+        async function checkAuthAndLoad() {
+            if (!adminToken) return;
+            
+            try {
+                const res = await fetch(`${API}/catalog/admin/users`, {
+                    headers: { 'X-Admin-Token': adminToken }
+                });
+                
+                if (res.ok) {
+                    document.getElementById('auth-block').classList.add('hidden');
+                    document.getElementById('admin-content').classList.remove('hidden');
+                    loadFilms();
+                    loadUsers();
+                } else {
+                    alert("Неверный токен администратора");
+                    localStorage.removeItem('admin_token');
+                    adminToken = null;
+                }
+            } catch(e) {
+                alert("Сервер недоступен. Убедитесь, что Gateway запущен.");
+            }
+        }
+
+        async function loadFilms() {
+            const res = await fetch(`${API}/catalog/films`);
+            const films = await res.json();
+            document.getElementById('films-list').innerHTML = films.map(f => `
+                <div class="list-item">
+                    <span>${f.title}</span>
+                    <button onclick="deleteFilm('${f._id || f.id}')" title="Удалить">🗑</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteFilm(filmId) {
+            if (!confirm("Удалить фильм?")) return;
+            const res = await fetch(`${API}/catalog/admin/films/${filmId}`, {
+                method: 'DELETE',
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            if (res.ok) loadFilms();
+            else alert("Ошибка удаления");
+        }
+
+        async function loadUsers() {
+            const res = await fetch(`${API}/catalog/admin/users`, {
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            const users = await res.json();
+            document.getElementById('users-list').innerHTML = users.map(u => `
+                <div class="list-item">
+                    <span style="font-size: 0.9rem;">${u.email}</span>
+                    <button style="font-size: 0.8rem; color: green;" onclick="giveSub('${u.id}')" title="Выдать подписку">Выдать подписку</button>
+                </div>
+            `).join('');
+        }
+
+        async function giveSub(userId) {
+            const res = await fetch(`${API}/catalog/admin/users/${userId}/give_sub`, {
+                method: 'POST',
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            if (res.ok) alert("Подписка выдана!");
+            else alert("Ошибка");
+        }
+
+        // Пытаемся загрузиться при старте
+        checkAuthAndLoad();
+    </script>
+</body>
+</html>
