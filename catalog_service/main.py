@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from bson.errors import InvalidId
 import datetime
 from models import Film, Subscription, User, Friendship, WatchHistory
@@ -26,6 +26,13 @@ class FilmCreate(BaseModel):
     genre: str
     duration_sec: int
     rating: float
+    poster_url: Optional[str] = None
+
+class FilmUpdate(BaseModel):
+    title: str = Field(min_length=1)
+    genre: str = Field(min_length=1)
+    duration_sec: int = Field(gt=0)
+    rating: float = Field(ge=0, le=10)
     poster_url: Optional[str] = None
 
 @app.post("/users/register")
@@ -208,6 +215,19 @@ async def admin_delete_film(film_id: str):
         raise HTTPException(status_code=404, detail="Фильм не найден")
     await film.delete()
     return {"message": "Фильм удален"}
+
+@app.put("/admin/films/{film_id}", response_model=Film, dependencies=[Depends(verify_admin)])
+async def admin_update_film(film_id: str, data: FilmUpdate):
+    try:
+        film = await Film.get(film_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Фильм не найден")
+    if not film:
+        raise HTTPException(status_code=404, detail="Фильм не найден")
+    for field, value in data.model_dump().items():
+        setattr(film, field, value)
+    await film.save()
+    return film
 
 # Выдача подписки пользователю вручную (если он заплатил наличными, например)
 @app.post("/admin/users/{user_id}/give_sub", dependencies=[Depends(verify_admin)])

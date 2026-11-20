@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель | СмотримВместе</title>
+    <style>
+        :root { --primary: #C8A2C8; --bg: #f4f4f9; --text: #333; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); padding: 30px; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: var(--primary); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .panel { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
+        .panel h2 { font-size: 1.2rem; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--primary); color: #fff; width: 100%; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; margin-bottom: 10px; }
+        .list-item { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; }
+        .list-item button { color: #C8A2C8; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Админ-панель</h1>
+        <p>Панель управления контентом и пользователями.</p>
+
+        <div id="auth-block">
+            <div class="form-group" style="max-width: 400px; margin-top: 20px;">
+                <label>Введите секретный код администратора:</label>
+                <input type="password" id="admin-token" class="form-control" placeholder="admin" style="margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn btn-primary" onclick="loginAdmin()">Войти</button>
+            </div>
+        </div>
+
+        <div id="admin-content" class="hidden">
+            <div class="grid">
+                <!-- Левая колонка: Управление фильмами -->
+                <div class="panel">
+                    <h2>🎬 Управление каталогом</h2>
+                    <div id="films-list"></div>
+                    <form id="edit-film-form" class="hidden" style="margin-top: 18px;" onsubmit="saveFilm(event)">
+                        <h3 style="margin-bottom: 12px;">Редактирование фильма</h3>
+                        <input type="hidden" id="edit-film-id">
+                        <div class="form-group"><label for="edit-title">Название</label><input class="form-control" id="edit-title" required maxlength="200"></div>
+                        <div class="form-group"><label for="edit-genre">Жанр</label><input class="form-control" id="edit-genre" required maxlength="100"></div>
+                        <div class="form-group"><label for="edit-duration">Продолжительность (сек.)</label><input class="form-control" id="edit-duration" type="number" min="1" step="1" required></div>
+                        <div class="form-group"><label for="edit-rating">Рейтинг (0–10)</label><input class="form-control" id="edit-rating" type="number" min="0" max="10" step="any" required></div>
+                        <div class="form-group"><label for="edit-poster">Ссылка на постер</label><input class="form-control" id="edit-poster" type="url"></div>
+                        <button class="btn btn-primary" type="submit">Сохранить изменения</button>
+                        <button class="btn btn-outline" type="button" onclick="cancelEdit()" style="margin-top: 8px;">Отмена</button>
+                    </form>
+                </div>
+
+                <!-- Правая колонка: Пользователи -->
+                <div class="panel">
+                    <h2>👥 Пользователи</h2>
+                    <div id="users-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000";
+        let adminToken = localStorage.getItem('admin_token');
+
+        function loginAdmin() {
+            const token = document.getElementById('admin-token').value;
+            if (!token) return;
+            // Просто сохраняем, проверим при запросе
+            adminToken = token;
+            localStorage.setItem('admin_token', token);
+            checkAuthAndLoad();
+        }
+
+        async function checkAuthAndLoad() {
+            if (!adminToken) return;
+            
+            try {
+                const res = await fetch(`${API}/catalog/admin/users`, {
+                    headers: { 'X-Admin-Token': adminToken }
+                });
+                
+                if (res.ok) {
+                    document.getElementById('auth-block').classList.add('hidden');
+                    document.getElementById('admin-content').classList.remove('hidden');
+                    loadFilms();
+                    loadUsers();
+                } else {
+                    alert("Неверный токен администратора");
+                    localStorage.removeItem('admin_token');
+                    adminToken = null;
+                }
+            } catch(e) {
+                alert("Сервер недоступен. Убедитесь, что Gateway запущен.");
+            }
+        }
+
+        let filmsCache = [];
+
+        async function loadFilms() {
+            try {
+                const res = await fetch(`${API}/catalog/films`);
+                if (!res.ok) throw new Error('Не удалось загрузить фильмы');
+                filmsCache = await res.json();
+                const list = document.getElementById('films-list');
+                list.replaceChildren();
+                filmsCache.forEach(f => {
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    const name = document.createElement('span');
+                    name.textContent = f.title;
+                    const actions = document.createElement('span');
+                    const edit = document.createElement('button');
+                    edit.textContent = '✏️';
+                    edit.title = 'Редактировать';
+                    edit.style.marginRight = '12px';
+                    edit.onclick = () => editFilm(f.id || f._id);
+                    const del = document.createElement('button');
+                    del.textContent = '🗑';
+                    del.title = 'Удалить';
+                    del.onclick = () => deleteFilm(f.id || f._id);
+                    actions.append(edit, del);
+                    item.append(name, actions);
+                    list.appendChild(item);
+                });
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function editFilm(filmId) {
+            const film = filmsCache.find(f => (f.id || f._id) === filmId);
+            if (!film) return alert('Фильм не найден');
+            document.getElementById('edit-film-id').value = filmId;
+            document.getElementById('edit-title').value = film.title;
+            document.getElementById('edit-genre').value = film.genre;
+            document.getElementById('edit-duration').value = film.duration_sec;
+            document.getElementById('edit-rating').value = film.rating;
+            document.getElementById('edit-poster').value = film.poster_url || '';
+            document.getElementById('edit-film-form').classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-film-form').classList.add('hidden');
+            document.getElementById('edit-film-form').reset();
+        }
+
+        async function saveFilm(event) {
+            event.preventDefault();
+            const filmId = document.getElementById('edit-film-id').value;
+            const data = {
+                title: document.getElementById('edit-title').value.trim(),
+                genre: document.getElementById('edit-genre').value.trim(),
+                duration_sec: Number(document.getElementById('edit-duration').value),
+                rating: Number(document.getElementById('edit-rating').value),
+                poster_url: document.getElementById('edit-poster').value.trim() || null
+            };
+            try {
+                const res = await fetch(`${API}/catalog/admin/films/${encodeURIComponent(filmId)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({}));
+                    throw new Error(typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить фильм');
+                }
+                cancelEdit();
+                await loadFilms();
+                alert('Изменения сохранены');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function deleteFilm(filmId) {
+            if (!confirm("Удалить фильм?")) return;
+            const res = await fetch(`${API}/catalog/admin/films/${filmId}`, {
+                method: 'DELETE',
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            if (res.ok) loadFilms();
+            else alert("Ошибка удаления");
+        }
+
+        async function loadUsers() {
+            const res = await fetch(`${API}/catalog/admin/users`, {
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            const users = await res.json();
+            document.getElementById('users-list').innerHTML = users.map(u => `
+                <div class="list-item">
+                    <span style="font-size: 0.9rem;">${u.email}</span>
+                    <button style="font-size: 0.8rem; color: green;" onclick="giveSub('${u.id}')" title="Выдать подписку">Выдать подписку</button>
+                </div>
+            `).join('');
+        }
+
+        async function giveSub(userId) {
+            const res = await fetch(`${API}/catalog/admin/users/${userId}/give_sub`, {
+                method: 'POST',
+                headers: { 'X-Admin-Token': adminToken }
+            });
+            if (res.ok) alert("Подписка выдана!");
+            else alert("Ошибка");
+        }
+
+        // Пытаемся загрузиться при старте
+        checkAuthAndLoad();
+    </script>
+</body>
+</html>
